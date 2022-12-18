@@ -1,4 +1,4 @@
-image: openjdk:8-jdk
+image: unitedclassifiedsapps/gitlab-ci-android-fastlane
 
 variables:
   ANDROID_COMPILE_SDK: "33"
@@ -6,25 +6,21 @@ variables:
   ANDROID_SDK_TOOLS:   "9123335"
 
 before_script:
-  - apt-get --quiet update --yes
-  - apt-get --quiet install --yes wget tar unzip lib32stdc++6 lib32z1
-  - wget --quiet --output-document=android-sdk.zip https://dl.google.com/android/repository/sdk-tools-linux-${ANDROID_SDK_TOOLS}.zip
-  - unzip -d android-sdk-linux android-sdk.zip
-  - echo y | android-sdk-linux/tools/bin/sdkmanager "platforms;android-${ANDROID_COMPILE_SDK}" >/dev/null
-  - echo y | android-sdk-linux/tools/bin/sdkmanager "platform-tools" >/dev/null
-  - echo y | android-sdk-linux/tools/bin/sdkmanager "build-tools;${ANDROID_BUILD_TOOLS}" >/dev/null
-  - export ANDROID_HOME=$PWD/android-sdk-linux
-  - export PATH=$PATH:$PWD/android-sdk-linux/platform-tools/
+  - export GRADLE_USER_HOME=$(pwd)/.gradle
   - chmod +x ./gradlew
-  - set +o pipefail
-  - yes | android-sdk-linux/tools/bin/sdkmanager --licenses
-  - set -o pipefail
+  # use yes to accept all licenses
+  - yes | sdkmanager --sdk_root=${ANDROID_HOME} --licenses || true
+
+cache:
+  paths:
+    - .m2/
+    - .gradle/
 
 stages:
   - build
   - test
 
-assembleDebug:
+build:
   stage: build
   script:
     - ./gradlew assembleDebug
@@ -32,7 +28,7 @@ assembleDebug:
     paths:
       - app/build/outputs/
 
-debugTests:
+unitTests:
   stage: test
   script:
-    - ./gradlew -Pci --console=plain :app:testDebug
+    - ./gradlew test
